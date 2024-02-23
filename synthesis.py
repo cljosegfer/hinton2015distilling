@@ -68,5 +68,5 @@ with torch.no_grad():
 if not os.path.exists('output'):
     os.makedirs('output')
 
-torch.save(H_trn, 'output/H_trn.pt')
+torch.save(H_trn, 'output/H_train.pt')
 # H = torch.load('output/H_trn.pt')
