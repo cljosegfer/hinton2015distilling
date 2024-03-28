@@ -43,6 +43,21 @@ class H_imagenet(Dataset):
 
         return x, h
 
+class Imagenet_h(Dataset):
+    def __init__(self, imagenet, H):
+        self.imagenet = imagenet
+        self.imagenet = self.imagenet.with_transform(transform)
+        self.H = H
+    
+    def __len__(self):
+        return self.imagenet.__len__()
+    
+    def __getitem__(self, idx):
+        y = self.imagenet.__getitem__(idx)['label']
+        h = self.H[idx, :, 0, 0]
+
+        return h, y
+
 def train(model, loader, optimizer, criterion, device):
     model.train()
     custo = 0
