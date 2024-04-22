@@ -29,7 +29,7 @@ val_loader = torch.utils.data.DataLoader(val, batch_size = BATCH_SIZE)
 origem = 'rn18'
 espelhado = 'rn34'
 model_label = origem + espelhado
-backbone = torch.load('output/{}.pt'.format(model_label))
+backbone = torch.load('output/l1_{}.pt'.format(model_label))
 
 # model = model_select(origem, pretrained = False)
 
@@ -46,10 +46,10 @@ backbone = torch.load('output/{}.pt'.format(model_label))
 #     new_key = key_transformation[i]
 #     new_state_dict[new_key] = value
 
-# # log = model.load_state_dict(backbone.state_dict(), strict = False)
 # log = model.load_state_dict(new_state_dict, strict = False)
 # assert log.missing_keys == ['fc.weight', 'fc.bias']
-model = torch.load('output/partial_{}_finetuned.pt'.format(model_label))
+# model = torch.load('output/partial_{}_finetuned.pt'.format(model_label))
+model = model_select(origem, pretrained = False)
 
 model = model.to(device)
 
@@ -58,13 +58,13 @@ criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters())
 
 log = []
-for epoch in (range(2, EPOCHS)):
+for epoch in (range(EPOCHS)):
     loss_trn, log_trn = train(model, trn_loader, optimizer, criterion, device, log = True)
     loss_val = eval(model, val_loader, criterion, device)
 
     log.append([loss_trn, loss_val])
     plot_log(log_trn, loss_val = loss_val, epoch = epoch)
-    torch.save(model, 'output/partial_{}_finetuned.pt'.format(model_label))
+    torch.save(model, 'output/partial_{}_normal.pt'.format(origem))
 
 print(log)
-torch.save(model.cpu(), 'output/{}_finetuned.pt'.format(model_label))
+torch.save(model.cpu(), 'output/{}_normal.pt'.format(origem))
