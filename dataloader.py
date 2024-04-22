@@ -37,5 +37,5 @@ class Cifar10(Dataset):
         x = self.data.__getitem__(idx)[0]
         y = self.data.__getitem__(idx)[1]
         if self.embedding:
-            return {'image': x, 'label': y, 'embedding': self.H[idx, :, 0, 0]}
+            return {'image': x, 'label': y, 'embedding': self.H[idx, :]}
         return {'image': x, 'label': y}
