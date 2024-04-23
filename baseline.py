@@ -7,12 +7,12 @@ from dataloader import Cifar10
 from runners.baseline import Runner
 
 # # init
-model_label = 'resnet50'
+model_label = 'resnet101'
 model = torch.hub.load('pytorch/vision:v0.10.0', model_label, pretrained = False)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 EPOCHS = 100
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 NUM_WORKERS = 6
 
 trn_ds = Cifar10(split = 'train')
