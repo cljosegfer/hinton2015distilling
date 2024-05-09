@@ -5,10 +5,15 @@ import os
 
 from dataloader import Cifar100
 from runners.baseline import Runner
+from utils import load_backbone
 
 # # init
-model_label = 'resnet34'
-model = torch.hub.load('pytorch/vision:v0.10.0', model_label, pretrained = False)
+reflexo = 'resnet18'
+origem = 'resnet34'
+model_label = reflexo + origem
+
+model = torch.hub.load('pytorch/vision:v0.10.0', reflexo, pretrained = False)
+model = load_backbone(model, 'output/{}/backbone/{}.pt'.format(model_label, model_label))['model']
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 EPOCHS = 100

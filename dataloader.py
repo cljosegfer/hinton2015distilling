@@ -23,7 +23,27 @@ TRANSFORM = {
 class Cifar10(Dataset):
     def __init__(self, split, embedding_path = None):
         self.transform = TRANSFORM[split]
-        self.data = torchvision.datasets.CIFAR10(root='/home/josegfer/datasets/cifar', 
+        self.data = torchvision.datasets.CIFAR10(root='/home/josegfer/datasets/cifar10', 
+                                                 train = (split == 'train'), transform = self.transform)
+        self.embedding = False
+        if embedding_path is not None:
+            self.H = torch.load(embedding_path)
+            self.embedding = True
+    
+    def __len__(self):
+        return self.data.__len__()
+    
+    def __getitem__(self, idx):
+        x = self.data.__getitem__(idx)[0]
+        y = self.data.__getitem__(idx)[1]
+        if self.embedding:
+            return {'image': x, 'label': y, 'embedding': self.H[idx, :]}
+        return {'image': x, 'label': y}
+
+class Cifar100(Dataset):
+    def __init__(self, split, embedding_path = None):
+        self.transform = TRANSFORM[split]
+        self.data = torchvision.datasets.CIFAR100(root='/home/josegfer/datasets/cifar100', 
                                                  train = (split == 'train'), transform = self.transform)
         self.embedding = False
         if embedding_path is not None:
