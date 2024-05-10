@@ -54,7 +54,7 @@ def load_backbone(model, backbone_path):
     return {'model': model, 'log': log}
 
 # https://stackoverflow.com/questions/50544730/how-do-i-split-a-custom-dataset-into-training-and-test-datasets/50544887#50544887
-def val_split(N, val_size = 0.1, random_seed = 0):
+def val_split(N, val_size = 0.15, random_seed = 0):
     idx = list(range(N))
     split = int(np.floor(val_size * N))
     

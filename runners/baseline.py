@@ -34,6 +34,7 @@ class Runner():
                 minimo = val_log
                 best = self.model
                 print('new checkpoint with val loss: {}'.format(minimo))
+            print(val_log)
         plot_log(self.model_label, log)
         # export(self.model, self.model_label)
         self.model = best

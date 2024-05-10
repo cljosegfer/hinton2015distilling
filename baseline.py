@@ -8,7 +8,7 @@ from utils import val_split
 from hparams import EPOCHS, BATCH_SIZE, NUM_WORKERS
 
 # # init
-model_label = 'resnet18'
+model_label = 'resnet101'
 model = torch.hub.load('pytorch/vision:v0.10.0', model_label, pretrained = False)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
