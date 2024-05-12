@@ -25,7 +25,7 @@ class Runner():
     def train(self, epochs, trn_loader, val_loader):
         self.model = self.model.to(self.device)
         criterion = nn.MSELoss()
-        optimizer = torch.optim.Adam(self.model.parameters())
+        optimizer = torch.optim.Adam(self.model.parameters(), lr = 1e-4)
 
         log = []
         minimo = 1e6
