@@ -3,7 +3,7 @@
 import torch
 
 from dataloader import Cifar100
-from runners.baseline import Runner
+from runners.toy import Runner
 from hparams import EPOCHS, BATCH_SIZE, NUM_WORKERS
 
 # # init

@@ -15,38 +15,43 @@ class BaselineRunner():
     def __init__(self, device, depth):
         self.device = device
         self.depth = depth
-        # self.model = CNN(depth = self.depth)
+        self.model = CNN(depth = self.depth)
         self.db = MNIST1Ddb()
         
         db_trn, db_val, db_tst = self.db.split()
-        # self.ds_trn = MNIST1D(db = db_trn, device = self.device)
-        # self.ds_val = MNIST1D(db = db_val, device = self.device)
-        self.ds_tst = MNIST1D(db = db_tst, device = self.device)
+        self.ds_trn = MNIST1D(db = db_trn, device = device)
+        self.ds_val = MNIST1D(db = db_val, device = device)
+        self.ds_tst = MNIST1D(db = db_tst, device = device)
     
-    def run(self, epochs = 200, lr = 1e-2, bs = 100):
-        log = []
-        for idx_trn, idx_val in self.db.kfold():
-            self.split(idx_trn, idx_val)
+    def run(self, epochs = 200, lr = 1e-2, bs = 100, plot = True):
+        self.model = self.model.to(self.device)
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.Adam(self.model.parameters(), lr = lr)
+
+        trn_loader = DataLoader(self.ds_trn, batch_size = bs, shuffle = True)
+        val_loader = DataLoader(self.ds_val, batch_size = bs, shuffle = False)
+        tst_loader = DataLoader(self.ds_tst, batch_size = bs, shuffle = False)
+
+        self.loss_trn = []
+        self.loss_val = []
+        self.loss_tst = []
+        self.acc_val = []
+        self.acc_tst = []
+
+        for epoch in tqdm(range(epochs)):
+            self.loss_trn.append(self.train(trn_loader, optimizer, criterion))
             
-            self.model = CNN(depth = self.depth)
-            self.model = self.model.to(self.device)
-
-            criterion = nn.CrossEntropyLoss()
-            optimizer = optim.Adam(self.model.parameters(), lr = lr)
-
-            trn_loader = DataLoader(self.ds_trn, batch_size = bs, shuffle = True)
-            val_loader = DataLoader(self.ds_val, batch_size = bs, shuffle = False)
-            tst_loader = DataLoader(self.ds_tst, batch_size = bs, shuffle = False)
-
-            for epoch in tqdm(range(epochs)):
-                loss_trn = self.train(trn_loader, optimizer, criterion)
-                loss_val, acc_val = self.eval(val_loader, criterion)
-                loss_tst, acc_tst = self.eval(tst_loader, criterion)
-            print(loss_val, acc_val)
-            print(loss_tst, acc_tst)
-            log.append(acc_tst)
-        return log
+            log, acc = self.eval(val_loader, criterion)
+            self.loss_val.append(log)
+            self.acc_val.append(acc)
+            
+            log, acc = self.eval(tst_loader, criterion)
+            self.loss_tst.append(log)
+            self.acc_tst.append(acc)
         
+        if plot:
+            self.plot()
+    
     def train(self, loader, optimizer, criterion):
         self.model.train()
         
@@ -103,9 +108,3 @@ class BaselineRunner():
         # axes[1].axhline(y = maximo, color = 'black', linestyle = 'dashed');
         # print(maximo, best, self.acc_tst[best], self.acc_tst[-1])
         print(self.acc_val[-1], self.acc_tst[-1])
-    
-    def split(self, idx_trn, idx_val):
-        x_trn, x_val, y_trn, y_val = self.db.data['x'][idx_trn, :], self.db.data['x'][idx_val, :], self.db.data['y'][idx_trn], self.db.data['y'][idx_val]
-        db_trn, db_val = {'x': x_trn, 'y': y_trn}, {'x': x_val, 'y': y_val}
-        self.ds_trn = MNIST1D(db = db_trn, device = self.device)
-        self.ds_val = MNIST1D(db = db_val, device = self.device)

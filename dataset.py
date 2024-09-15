@@ -2,7 +2,7 @@
 import torch
 
 from mnist1d.data import make_dataset, get_dataset_args
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
 from torch.utils.data import Dataset
 
 class MNIST1Ddb():
@@ -15,6 +15,11 @@ class MNIST1Ddb():
         x_trn, x_val, y_trn, y_val = train_test_split(x, y, test_size = 0.1)
         x_tst, y_tst = self.data['x_test'], self.data['y_test']
         return {'x': x_trn, 'y': y_trn}, {'x': x_val, 'y': y_val}, {'x': x_tst, 'y': y_tst}
+    
+    def kfold(self, k = 10):
+        kf = KFold(n_splits = k, shuffle = True, random_state = 0)
+        x, y = self.data['x'], self.data['y']
+        return kf.split(x, y)
 
 class MNIST1D(Dataset):
     def __init__(self, db, device = 'cpu'):

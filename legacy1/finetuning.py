@@ -4,7 +4,7 @@ import torch
 import os
 
 from dataloader import Cifar100
-from runners.baseline import Runner
+from runners.toy import Runner
 from utils import load_backbone, val_split
 from hparams import EPOCHS, BATCH_SIZE, NUM_WORKERS
 
