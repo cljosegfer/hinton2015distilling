@@ -1,107 +1,110 @@
 
-import os
 import torch
 import torch.nn as nn
-import json
+import torch.optim as optim
+import matplotlib.pyplot as plt
+import numpy as np
 
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from utils import plot_log, export
+from models import CNN
+from dataset import MNIST1Ddb, MNIST1D
 
-class Runner():
-    def __init__(self, device, model, model_label):
+class BaselineRunner():
+    def __init__(self, device, depth):
         self.device = device
-        self.model = model
-        self.model_label = model_label
-        if not os.path.exists('output/{}'.format(model_label)):
-            os.makedirs('output/{}'.format(model_label))
+        self.depth = depth
+        self.model = CNN(depth = self.depth)
+        self.db = MNIST1Ddb()
+        
+        db_trn, db_val, db_tst = self.db.split()
+        self.ds_trn = MNIST1D(db = db_trn, device = device)
+        self.ds_val = MNIST1D(db = db_val, device = device)
+        self.ds_tst = MNIST1D(db = db_tst, device = device)
     
-    def train(self, epochs, trn_loader, val_loader):
+    def run(self, epochs = 200, lr = 1e-2, bs = 100, plot = True):
         self.model = self.model.to(self.device)
         criterion = nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(self.model.parameters(), lr = 1e-4)
+        optimizer = optim.Adam(self.model.parameters(), lr = lr)
 
-        log = []
-        minimo = 1e6
-        best = self.model
-        for epoch in range(epochs):
-            print('-- epoch {}'.format(epoch))
-            trn_log = self._train_loop(trn_loader, optimizer, criterion)['trn_log']
-            val_log = self._eval_loop(val_loader, criterion)['val_log']
-            # plot_log_epoch(self.model_label, trn_log, val_log, epoch)
-            log.append([trn_log, val_log])
-            if val_log < minimo:
-                minimo = val_log
-                best = self.model
-                print('new checkpoint with val loss: {}'.format(minimo))
-            print(val_log)
-        plot_log(self.model_label, log)
-        # export(self.model, self.model_label)
-        self.model = best
-        export(best, self.model_label)
+        trn_loader = DataLoader(self.ds_trn, batch_size = bs, shuffle = True)
+        val_loader = DataLoader(self.ds_val, batch_size = bs, shuffle = False)
+        tst_loader = DataLoader(self.ds_tst, batch_size = bs, shuffle = False)
 
-    def _train_loop(self, loader, optimizer, criterion):
-        # log = []
-        log = 0
+        self.loss_trn = []
+        self.loss_val = []
+        self.loss_tst = []
+        self.acc_val = []
+        self.acc_tst = []
+
+        for epoch in tqdm(range(epochs)):
+            self.loss_trn.append(self.train(trn_loader, optimizer, criterion))
+            
+            log, acc = self.eval(val_loader, criterion)
+            self.loss_val.append(log)
+            self.acc_val.append(acc)
+            
+            log, acc = self.eval(tst_loader, criterion)
+            self.loss_tst.append(log)
+            self.acc_tst.append(acc)
+        
+        if plot:
+            self.plot()
+    
+    def train(self, loader, optimizer, criterion):
         self.model.train()
-        for batch in tqdm(loader):
-            x = batch['image'].to(self.device)
-            y = batch['label'].to(self.device)
-
+        
+        log = 0
+        for batch in (loader):
+            x, y = batch['x'], batch['y']
+            
             yhat = self.model.forward(x)
             loss = criterion(yhat, y)
-
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            # log.append(loss.item())
+            loss.backward(); optimizer.step(); optimizer.zero_grad()
+            
             log += loss.item()
-        # return {'trn_log': log}
-        return {'trn_log': log / len(loader)}
+        log /= loader.dataset.__len__()
+        return log
     
-    def _eval_loop(self, loader, criterion):
-        log = 0
+    def eval(self, loader, criterion):
         self.model.eval()
-        with torch.no_grad():
-            for batch in tqdm(loader):
-                x = batch['image'].to(self.device)
-                y = batch['label'].to(self.device)
 
+        log = 0
+        acc = 0
+        with torch.no_grad():
+            for batch in (loader):
+                x, y = batch['x'], batch['y']
+            
                 yhat = self.model.forward(x)
                 loss = criterion(yhat, y)
-
+                
                 log += loss.item()
-        return {'val_log': log / len(loader)}
+                acc += np.sum(yhat.argmax(-1).cpu().numpy() == y.cpu().numpy())
+        log /= loader.dataset.__len__()
+        acc /= loader.dataset.__len__()
+        return log, acc
     
-    def acc(self, loader):
-        num = 0
-        den = 0
-        self.model.to(self.device).eval()
-        with torch.no_grad():
-            for batch in tqdm(loader):
-                x = batch['image'].to(self.device)
-                y = batch['label'].to(self.device)
+    def plot(self):
+        fig, axes = plt.subplots(1, 2, figsize = (14, 4))
 
-                yhat = self.model.forward(x)
-                _, predicted = torch.max(yhat.data, 1)
-                den += y.size(0)
-                num += (predicted == y).sum().item()
-        log = {'acc': num / den}
-        with open('output/{}/accuracy.json'.format(self.model_label), 'w') as file:
-            json.dump(log, file)
-        return log
+        axes[0].plot(self.loss_val, label = 'val');
+        axes[0].plot(self.loss_tst, label = 'tst');
+        axes[0].plot(self.loss_trn, label = 'trn');
+        axes[0].legend();
+        
+        axes[1].plot(self.acc_val, label = 'val');
+        axes[1].plot(self.acc_tst, label = 'tst');
+        axes[1].legend();
 
-    def synthesis(self, loader):
-        backbone = list(self.model.children())[:-1]
-        backbone = torch.nn.Sequential(*backbone)
-        backbone = backbone.to(self.device).eval()
-
-        H = torch.empty(size = [0])
-        with torch.no_grad():
-            for batch in tqdm(loader):
-                x = batch['image'].to(self.device)
-
-                h = backbone.forward(x)
-                H = torch.cat((H, h[:, :, 0, 0].cpu()))
-        return {'image features': H}
+        # minimo = np.min(self.loss_val)
+        # best = np.argmin(self.loss_val)
+        # axes[0].axhline(y = minimo, color = 'black', linestyle = 'dashed');
+        # print(minimo, best, self.loss_tst[best])
+        print(self.loss_val[-1], self.loss_tst[-1], self.loss_trn[-1])
+        
+        # maximo = np.max(self.acc_val)
+        # best = np.argmax(self.acc_tst)
+        # axes[1].axhline(y = maximo, color = 'black', linestyle = 'dashed');
+        # print(maximo, best, self.acc_tst[best], self.acc_tst[-1])
+        print(self.acc_val[-1], self.acc_tst[-1])
